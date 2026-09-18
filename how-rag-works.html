@@ -1,0 +1,1583 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>How RAG Works</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=Courier+Prime&display=swap"
+    rel="stylesheet">
+  <style>
+    :root {
+      --bg: #F3EEE3;
+      --bg-card: #FFFCF5;
+      --bg-card-2: #EFE7D4;
+      --text: #221F2B;
+      --text-soft: #6B6455;
+      --border: #DAD0B8;
+      --gold: #A5760B;
+      --gold-soft: #F3E4BC;
+      --teal: #236A5C;
+      --teal-soft: #DCEAE4;
+      --ink: #211F2E;
+      --shadow: rgba(33, 31, 46, 0.08);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --bg: #16141E;
+        --bg-card: #201D2B;
+        --bg-card-2: #262233;
+        --text: #F1ECDD;
+        --text-soft: #ABA391;
+        --border: #3B3649;
+        --gold: #E3B547;
+        --gold-soft: #3A2F17;
+        --teal: #63BDA8;
+        --teal-soft: #163530;
+        --ink: #F1ECDD;
+        --shadow: rgba(0, 0, 0, 0.35);
+      }
+    }
+
+    :root[data-theme="dark"] {
+      --bg: #16141E;
+      --bg-card: #201D2B;
+      --bg-card-2: #262233;
+      --text: #F1ECDD;
+      --text-soft: #ABA391;
+      --border: #3B3649;
+      --gold: #E3B547;
+      --gold-soft: #3A2F17;
+      --teal: #63BDA8;
+      --teal-soft: #163530;
+      --ink: #F1ECDD;
+      --shadow: rgba(0, 0, 0, 0.35);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .wrap {
+      max-width: 780px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    h1,
+    h2,
+    h3 {
+      font-family: 'Fraunces', serif;
+      font-weight: 600;
+      margin: 0 0 0.4em;
+      color: var(--ink);
+    }
+
+    p {
+      color: var(--text);
+    }
+
+    .soft {
+      color: var(--text-soft);
+    }
+
+    /* ---------- Hero ---------- */
+    .hero {
+      padding: 90px 0 60px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .hero .kicker {
+      font-family: 'Fraunces', serif;
+      font-style: italic;
+      font-size: 1.05rem;
+      color: var(--gold);
+      margin-bottom: 18px;
+    }
+
+    .hero h1 {
+      font-size: clamp(2.4rem, 6vw, 3.6rem);
+      line-height: 1.08;
+      letter-spacing: -0.01em;
+      max-width: 11ch;
+    }
+
+    .hero .lede {
+      font-size: 1.15rem;
+      max-width: 56ch;
+      color: var(--text-soft);
+      margin-top: 20px;
+    }
+
+    .hero-diagram {
+      margin-top: 48px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .hero-pill {
+      font-family: 'Fraunces', serif;
+      font-size: 0.95rem;
+      padding: 10px 18px;
+      border-radius: 100px;
+      border: 1px solid var(--border);
+      background: var(--bg-card);
+    }
+
+    .hero-pill.gold {
+      border-color: var(--gold);
+      color: var(--gold);
+    }
+
+    .hero-pill.teal {
+      border-color: var(--teal);
+      color: var(--teal);
+    }
+
+    .hero-arrow {
+      color: var(--text-soft);
+      font-size: 1.2rem;
+    }
+
+    section {
+      padding: 64px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    section:last-of-type {
+      border-bottom: none;
+    }
+
+    section h2 {
+      font-size: clamp(1.6rem, 3.4vw, 2.1rem);
+      max-width: 20ch;
+    }
+
+    .section-lede {
+      color: var(--text-soft);
+      max-width: 62ch;
+      margin-top: 8px;
+      margin-bottom: 36px;
+      font-size: 1.02rem;
+    }
+
+    /* ---------- Closed vs open book ---------- */
+    .compare {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    @media (max-width: 620px) {
+      .compare {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .compare-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 26px 26px 28px;
+    }
+
+    .compare-card h3 {
+      font-size: 1.15rem;
+      margin-bottom: 10px;
+    }
+
+    .compare-card.closed {
+      border-top: 3px solid var(--text-soft);
+    }
+
+    .compare-card.open {
+      border-top: 3px solid var(--teal);
+    }
+
+    .compare-card p {
+      font-size: 0.97rem;
+      color: var(--text-soft);
+      margin: 0;
+    }
+
+    /* ---------- Step diagram ---------- */
+    .steps-nav {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 30px;
+      flex-wrap: wrap;
+    }
+
+    .step-btn {
+      font-family: 'Inter', sans-serif;
+      font-size: 0.88rem;
+      font-weight: 600;
+      padding: 9px 16px;
+      border-radius: 100px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text-soft);
+      cursor: pointer;
+      transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+    }
+
+    .step-btn.active {
+      background: var(--ink);
+      color: var(--bg);
+      border-color: var(--ink);
+    }
+
+    :root[data-theme="dark"] .step-btn.active,
+    @media (prefers-color-scheme: dark) {}
+
+    .step-panel {
+      display: none;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 34px;
+      gap: 30px;
+      align-items: center;
+    }
+
+    .step-panel.active {
+      display: grid;
+      grid-template-columns: 130px 1fr;
+    }
+
+    @media (max-width: 620px) {
+      .step-panel.active {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .step-icon {
+      width: 100%;
+      height: auto;
+    }
+
+    .step-panel h3 {
+      font-size: 1.3rem;
+      margin-bottom: 8px;
+    }
+
+    .step-panel p {
+      color: var(--text-soft);
+      margin: 0;
+      font-size: 0.98rem;
+    }
+
+    .step-num {
+      font-family: 'Fraunces', serif;
+      font-style: italic;
+      color: var(--gold);
+      font-size: 0.95rem;
+      margin-bottom: 4px;
+      display: block;
+    }
+
+    /* ---------- Demo ---------- */
+    .demo-box {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 30px;
+    }
+
+    .demo-questions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .q-chip {
+      font-size: 0.85rem;
+      padding: 8px 14px;
+      border-radius: 100px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      color: var(--text);
+      cursor: pointer;
+    }
+
+    .q-chip:hover {
+      border-color: var(--teal);
+    }
+
+    .demo-input-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+
+    .demo-input-row input {
+      flex: 1;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.98rem;
+      padding: 12px 14px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    .demo-input-row button {
+      font-family: 'Inter', sans-serif;
+      font-weight: 600;
+      font-size: 0.95rem;
+      padding: 12px 20px;
+      border-radius: 4px;
+      border: none;
+      background: var(--ink);
+      color: var(--bg);
+      cursor: pointer;
+    }
+
+    .demo-input-row button:hover {
+      opacity: 0.88;
+    }
+
+    .demo-hint {
+      font-size: 0.85rem;
+      color: var(--text-soft);
+      margin-bottom: 26px;
+    }
+
+    .demo-stage {
+      display: none;
+      margin-top: 26px;
+    }
+
+    .demo-stage.show {
+      display: block;
+    }
+
+    .demo-stage-label {
+      font-family: 'Fraunces', serif;
+      font-style: italic;
+      font-size: 0.95rem;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .dot.gold {
+      background: var(--gold);
+    }
+
+    .dot.teal {
+      background: var(--teal);
+    }
+
+    .cards-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+      margin-bottom: 30px;
+    }
+
+    .doc-card {
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 14px 16px;
+      background: var(--bg);
+      opacity: 0.45;
+      transition: opacity 0.25s ease, border-color 0.25s ease, transform 0.25s ease;
+      font-size: 0.86rem;
+    }
+
+    .doc-card.match {
+      opacity: 1;
+      border-color: var(--gold);
+      box-shadow: 0 2px 10px var(--shadow);
+    }
+
+    .doc-card .doc-title {
+      font-family: 'Courier Prime', monospace;
+      font-weight: 700;
+      font-size: 0.78rem;
+      letter-spacing: 0.02em;
+      color: var(--gold);
+      margin-bottom: 6px;
+    }
+
+    .doc-card.match .doc-title {
+      color: var(--gold);
+    }
+
+    .doc-card:not(.match) .doc-title {
+      color: var(--text-soft);
+    }
+
+    .doc-card p {
+      margin: 0;
+      color: var(--text-soft);
+      font-size: 0.85rem;
+    }
+
+    .doc-card mark {
+      background: var(--gold-soft);
+      color: var(--text);
+      border-radius: 2px;
+      padding: 0 2px;
+    }
+
+    .prompt-block {
+      font-family: 'Courier Prime', monospace;
+      font-size: 0.82rem;
+      line-height: 1.65;
+      background: var(--ink);
+      color: var(--bg);
+      border-radius: 4px;
+      padding: 20px 22px;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      margin-bottom: 30px;
+    }
+
+    .prompt-block .lbl {
+      color: var(--gold);
+    }
+
+    .answer-block {
+      border: 1px solid var(--teal);
+      background: var(--teal-soft);
+      border-radius: 4px;
+      padding: 20px 22px;
+      font-size: 0.98rem;
+    }
+
+    .answer-block .who {
+      font-weight: 700;
+      color: var(--teal);
+      font-size: 0.82rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 8px;
+      display: block;
+    }
+
+    .answer-block.no-match {
+      border-color: var(--gold);
+      background: var(--gold-soft);
+    }
+
+    .answer-block.no-match .who {
+      color: var(--gold);
+    }
+
+    .retrieve-note {
+      font-size: 0.85rem;
+      color: var(--text-soft);
+      font-style: italic;
+      margin-bottom: 14px;
+    }
+
+    /* ---------- Connect-to-LLM section ---------- */
+    .pipeline-cols {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 22px;
+      margin: 26px 0 4px;
+    }
+
+    @media (max-width: 560px) {
+      .pipeline-cols {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .pipe-box {
+      border: 1px solid var(--border);
+      background: var(--bg-card);
+      border-radius: 4px;
+      padding: 13px 16px;
+      text-align: center;
+      font-size: 0.9rem;
+    }
+
+    .pipe-box.gold {
+      border-color: var(--gold);
+      color: var(--gold);
+      font-weight: 600;
+    }
+
+    .pipe-box.teal {
+      border-color: var(--teal);
+      color: var(--teal);
+      font-weight: 600;
+    }
+
+    .pipe-arrow-text {
+      text-align: center;
+      font-size: 0.78rem;
+      color: var(--text-soft);
+      margin: 8px 0;
+    }
+
+    .pipe-converge {
+      text-align: center;
+      font-size: 0.78rem;
+      color: var(--text-soft);
+      margin: 20px 0 10px;
+    }
+
+    .pipe-final {
+      max-width: 460px;
+      margin: 0 auto 8px;
+    }
+
+    .connect-sub {
+      margin-top: 40px;
+    }
+
+    .connect-sub h3 {
+      font-size: 1.12rem;
+      margin-bottom: 8px;
+    }
+
+    .connect-sub p {
+      color: var(--text-soft);
+      font-size: 0.98rem;
+    }
+
+    .chunk-pair {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin: 18px 0;
+    }
+
+    @media (max-width: 560px) {
+      .chunk-pair {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .chunk-card {
+      border: 1px solid var(--border);
+      background: var(--bg-card);
+      border-radius: 4px;
+      padding: 14px 16px;
+      font-size: 0.86rem;
+    }
+
+    .chunk-card .chunk-label {
+      font-family: 'Courier Prime', monospace;
+      font-weight: 700;
+      font-size: 0.75rem;
+      color: var(--teal);
+      margin-bottom: 6px;
+      display: block;
+    }
+
+    .chunk-card p {
+      margin: 0;
+      color: var(--text-soft);
+    }
+
+    .chunk-card mark {
+      background: var(--gold-soft);
+      color: var(--text);
+      border-radius: 2px;
+      padding: 0 2px;
+    }
+
+    .vec-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0;
+      font-size: 0.86rem;
+    }
+
+    .vec-table th,
+    .vec-table td {
+      border-bottom: 1px solid var(--border);
+      padding: 9px 10px;
+      text-align: left;
+      color: var(--text);
+    }
+
+    .vec-table th {
+      color: var(--text-soft);
+      font-weight: 600;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .vec-table td.num {
+      font-family: 'Courier Prime', monospace;
+    }
+
+    .vec-table tr.top td {
+      color: var(--teal);
+      font-weight: 600;
+    }
+
+    .angle-diagrams {
+      display: flex;
+      gap: 24px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin: 22px 0 6px;
+    }
+
+    .angle-diagram {
+      text-align: center;
+    }
+
+    .angle-diagram svg {
+      width: 130px;
+      height: 130px;
+    }
+
+    .angle-diagram .angle-label {
+      font-size: 0.82rem;
+      color: var(--text-soft);
+      margin-top: 6px;
+    }
+
+    .angle-diagram .angle-label strong {
+      color: var(--text);
+    }
+
+    /* ---------- Method comparison visualization ---------- */
+    .method-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-top: 22px;
+    }
+
+    @media (max-width: 680px) {
+      .method-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .method-panel {
+      border: 1px solid var(--border);
+      background: var(--bg-card);
+      border-radius: 6px;
+      padding: 18px 20px;
+    }
+
+    .method-panel h4 {
+      margin: 0 0 3px;
+      font-family: 'Fraunces', serif;
+      font-size: 1.02rem;
+      color: var(--ink);
+    }
+
+    .method-panel .method-note {
+      font-size: 0.78rem;
+      color: var(--text-soft);
+      margin: 0 0 14px;
+    }
+
+    .bar-row {
+      display: grid;
+      grid-template-columns: 108px 1fr 50px;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+      font-size: 0.8rem;
+    }
+
+    .bar-row .bar-label {
+      color: var(--text-soft);
+    }
+
+    .bar-track {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      height: 13px;
+      overflow: hidden;
+    }
+
+    .bar-fill {
+      height: 100%;
+      background: var(--text-soft);
+      border-radius: 2px 0 0 2px;
+      transition: width 0.4s ease;
+    }
+
+    .bar-row.top .bar-label {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    .method-panel.lexical .bar-row.top .bar-fill {
+      background: var(--gold);
+    }
+
+    .method-panel.semantic .bar-row.top .bar-fill {
+      background: var(--teal);
+    }
+
+    .method-panel.hybrid .bar-row.top .bar-fill {
+      background: linear-gradient(90deg, var(--gold), var(--teal));
+    }
+
+    .bar-row .bar-value {
+      font-family: 'Courier Prime', monospace;
+      text-align: right;
+      color: var(--text-soft);
+      font-size: 0.76rem;
+    }
+
+    .method-zero-note {
+      font-size: 0.78rem;
+      color: var(--text-soft);
+      font-style: italic;
+      margin-top: 8px;
+    }
+
+    /* ---------- Why it matters ---------- */
+    .why-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 22px 30px;
+    }
+
+    @media (max-width: 620px) {
+      .why-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .why-item {
+      padding-left: 20px;
+      border-left: 2px solid var(--gold);
+    }
+
+    .why-item h3 {
+      font-size: 1.02rem;
+      margin-bottom: 6px;
+    }
+
+    .why-item p {
+      font-size: 0.92rem;
+      color: var(--text-soft);
+      margin: 0;
+    }
+
+    footer {
+      padding: 40px 0 70px;
+      text-align: center;
+    }
+
+    footer p {
+      color: var(--text-soft);
+      font-size: 0.88rem;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="wrap hero">
+    <div class="kicker">A plain-language walkthrough</div>
+    <h1>How RAG works</h1>
+    <p class="lede">Retrieval-Augmented Generation is how an AI model answers questions using facts it looks up first,
+      instead of only relying on what it memorized during training. Here's the idea, step by step — with a working
+      example at the end.</p>
+    <div class="hero-diagram">
+      <span class="hero-pill">Your question</span>
+      <span class="hero-arrow">→</span>
+      <span class="hero-pill gold">Look things up</span>
+      <span class="hero-arrow">→</span>
+      <span class="hero-pill teal">Write the answer</span>
+    </div>
+  </div>
+
+  <section class="wrap">
+    <h2>The problem RAG solves</h2>
+    <p class="section-lede">A language model's knowledge is frozen at training time, and it doesn't know anything
+      private to you — your company's policies, yesterday's news, your own documents. Asked about those things, it can
+      only guess. RAG gives it a way to check first.</p>
+    <div class="compare">
+      <div class="compare-card closed">
+        <h3>Without RAG — closed book</h3>
+        <p>The model answers purely from memory. If the answer isn't in what it learned during training, it may guess
+          fluently and confidently — and be wrong. This is where "hallucination" comes from.</p>
+      </div>
+      <div class="compare-card open">
+        <h3>With RAG — open book</h3>
+        <p>Before answering, the model retrieves relevant text from a trusted source — documents, a database, a website
+          — and is told to base its answer on that. It's an exam where it's allowed to check its notes.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="wrap">
+    <h2>Four steps, every time</h2>
+    <p class="section-lede">Click through each stage to see what actually happens between you asking a question and
+      getting an answer.</p>
+
+    <div class="steps-nav" id="stepsNav"></div>
+
+    <div id="stepPanels"></div>
+  </section>
+
+  <section class="wrap">
+    <h2>Try it yourself</h2>
+    <p class="section-lede">This mini demo answers questions about a made-up plant café, "Fern &amp; Kettle," using five
+      short reference documents. Ask something — or pick a question below — and watch the retrieval happen.</p>
+
+    <div class="demo-box">
+      <div class="demo-questions" id="demoQuestions"></div>
+      <div class="demo-input-row">
+        <input type="text" id="demoInput" placeholder="Ask about hours, allergens, rewards, plants, or wifi…" />
+        <button id="demoAsk">Ask</button>
+      </div>
+      <div class="demo-hint">This is a simplified simulation for teaching purposes — real RAG systems use semantic
+        search (embeddings) rather than simple keyword matching, and a real language model to write the final answer.
+      </div>
+
+      <div class="demo-stage" id="stageRetrieve">
+        <div class="demo-stage-label"><span class="dot gold"></span> Step 2 — Retrieve: matching documents from the
+          knowledge base</div>
+        <div class="retrieve-note" id="retrieveNote"></div>
+        <div class="cards-row" id="docCards"></div>
+      </div>
+
+      <div class="demo-stage" id="stageAugment">
+        <div class="demo-stage-label"><span class="dot gold"></span> Step 3 — Augment: the prompt actually sent to the
+          model</div>
+        <div class="prompt-block" id="promptBlock"></div>
+      </div>
+
+      <div class="demo-stage" id="stageGenerate">
+        <div class="demo-stage-label"><span class="dot teal"></span> Step 4 — Generate: the model's answer, grounded in
+          what it retrieved</div>
+        <div class="answer-block" id="answerBlock"><span class="who" id="answerWho">Answer</span><span
+            id="answerText"></span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="wrap">
+    <h2>How this connects to a real LLM</h2>
+    <p class="section-lede">The demo above matches on shared words so you can see the mechanism. A production system
+      does the same four steps, but retrieval works on <em>meaning</em>, and "augmenting the prompt" is a literal API
+      call — nothing mystical.</p>
+
+    <div class="connect-sub">
+      <h3>1 · Split documents into chunks</h3>
+      <p>A whole document is usually too long and covers too many topics to embed as one piece, so it first gets cut
+        into smaller <strong>chunks</strong> — often 200–500 words each. Consecutive chunks usually
+        <strong>overlap</strong> by a sentence or two, so a fact sitting right on the boundary doesn't get orphaned in a
+        chunk that no longer makes sense on its own. Here's a longer café FAQ paragraph split into two overlapping
+        chunks — the shared sentence is highlighted in both:</p>
+      <div class="chunk-pair">
+        <div class="chunk-card">
+          <span class="chunk-label">CHUNK 1</span>
+          <p>Fern &amp; Kettle sources its coffee from small Ethiopian and Colombian farms and roasts beans in-house
+            every Thursday. All pastries are baked fresh each morning starting at 5am, <mark>and the almond croissants
+              sell out first — usually by 10am on weekends.</mark></p>
+        </div>
+        <div class="chunk-card">
+          <span class="chunk-label">CHUNK 2</span>
+          <p><mark>...and the almond croissants sell out first — usually by 10am on weekends.</mark> Because we bake
+            with almond and oat flour blends for several items, guests with tree nut allergies should ask staff before
+            ordering, since cross-contact is possible even in nut-free items.</p>
+        </div>
+      </div>
+      <p>Without that overlap, Chunk 2 on its own would start mid-thought — "…and the almond croissants sell out first"
+        — with no idea what it's referring to. The repeated sentence keeps each chunk understandable by itself.</p>
+    </div>
+
+    <div class="connect-sub">
+      <h3>2 · Turn each chunk into a vector</h3>
+      <p>An <strong>embedding model</strong> reads a chunk and outputs a fixed-length list of numbers — real ones
+        typically have 1,024 to 3,072 numbers per chunk, and no single number means anything on its own. What matters is
+        that chunks about similar things end up as numbers that point in <em>similar directions</em>. To make that
+        visible, here's the same idea with just 3 made-up dimensions instead of thousands — real embeddings don't have
+        labeled dimensions like this, it's purely to build intuition:</p>
+      <table class="vec-table">
+        <tr>
+          <th>Chunk</th>
+          <th>food/allergen</th>
+          <th>plant/garden</th>
+          <th>rewards</th>
+        </tr>
+        <tr>
+          <td>Menu &amp; Allergens</td>
+          <td class="num">0.90</td>
+          <td class="num">0.05</td>
+          <td class="num">0.02</td>
+        </tr>
+        <tr>
+          <td>Plant Care &amp; Returns</td>
+          <td class="num">0.05</td>
+          <td class="num">0.92</td>
+          <td class="num">0.03</td>
+        </tr>
+        <tr>
+          <td>Loyalty Program</td>
+          <td class="num">0.04</td>
+          <td class="num">0.02</td>
+          <td class="num">0.94</td>
+        </tr>
+        <tr>
+          <td><em>Your question:</em> "Do your pastries have nuts in them?"</td>
+          <td class="num">0.88</td>
+          <td class="num">0.04</td>
+          <td class="num">0.01</td>
+        </tr>
+      </table>
+      <p>Notice the question's vector <code>[0.88, 0.04, 0.01]</code> sits almost exactly where the "Menu &amp;
+        Allergens" chunk sits, and nowhere near the plant or rewards chunks — even though the question never uses the
+        words "menu" or "allergen."</p>
+    </div>
+
+    <div class="connect-sub">
+      <h3>3 · Compare vectors with cosine similarity</h3>
+      <p><strong>Cosine similarity</strong> measures the angle between two vectors and ignores their length — it answers
+        "do these two point in the same direction?" A score of <strong>1.0</strong> means identical direction (same
+        meaning), <strong>0</strong> means unrelated, <strong>-1</strong> means opposite. The formula is the dot product
+        of the two vectors, divided by the product of their lengths:</p>
+      <div class="prompt-block">cos(θ) = (Q · C) / (|Q| × |C|)
+
+        <span class="lbl">Question vector Q</span> = [0.88, 0.04, 0.01]
+        <span class="lbl">Chunk A — Menu & Allergens</span> = [0.90, 0.05, 0.02]
+        <span class="lbl">Chunk B — Plant Care</span> = [0.05, 0.92, 0.03]
+
+        Q · A = (0.88×0.90) + (0.04×0.05) + (0.01×0.02) = 0.794
+        |Q| = sqrt(0.88² + 0.04² + 0.01²) = 0.881
+        |A| = sqrt(0.90² + 0.05² + 0.02²) = 0.902
+        cos(Q, A) = 0.794 / (0.881 × 0.902) ≈ <span class="lbl">0.9999</span> → almost identical direction
+
+        Q · B = (0.88×0.05) + (0.04×0.92) + (0.01×0.03) = 0.081
+        |B| = sqrt(0.05² + 0.92² + 0.03²) = 0.922
+        cos(Q, B) = 0.081 / (0.881 × 0.922) ≈ <span class="lbl">0.10</span> → basically unrelated
+      </div>
+      <p>Do the same math against every chunk in the database and rank the results — the highest cosine score wins:</p>
+      <table class="vec-table">
+        <tr>
+          <th>Chunk</th>
+          <th>Cosine similarity to question</th>
+          <th>Retrieved?</th>
+        </tr>
+        <tr class="top">
+          <td>Menu &amp; Allergens</td>
+          <td class="num">0.9999</td>
+          <td>✅ Yes — top match</td>
+        </tr>
+        <tr>
+          <td>Plant Care &amp; Returns</td>
+          <td class="num">0.10</td>
+          <td>No</td>
+        </tr>
+        <tr>
+          <td>Loyalty Program</td>
+          <td class="num">0.05</td>
+          <td>No</td>
+        </tr>
+      </table>
+      <div class="angle-diagrams">
+        <div class="angle-diagram">
+          <svg viewBox="0 0 140 140" xmlns="http://www.w3.org/2000/svg">
+            <line x1="15" y1="125" x2="120" y2="35" stroke="var(--teal)" stroke-width="3" stroke-linecap="round" />
+            <line x1="15" y1="125" x2="128" y2="48" stroke="var(--gold)" stroke-width="3" stroke-dasharray="4 3"
+              stroke-linecap="round" />
+            <circle cx="15" cy="125" r="3" fill="var(--text-soft)" />
+          </svg>
+          <div class="angle-label">tiny angle → <strong>cos ≈ 1.0</strong><br>question vs. Menu &amp; Allergens</div>
+        </div>
+        <div class="angle-diagram">
+          <svg viewBox="0 0 140 140" xmlns="http://www.w3.org/2000/svg">
+            <line x1="15" y1="125" x2="120" y2="35" stroke="var(--teal)" stroke-width="3" stroke-linecap="round" />
+            <line x1="15" y1="125" x2="35" y2="15" stroke="var(--gold)" stroke-width="3" stroke-dasharray="4 3"
+              stroke-linecap="round" />
+            <circle cx="15" cy="125" r="3" fill="var(--text-soft)" />
+          </svg>
+          <div class="angle-label">wide angle → <strong>cos ≈ 0.10</strong><br>question vs. Plant Care</div>
+        </div>
+      </div>
+      <p class="soft" style="font-size:0.85rem;">(Solid teal = question vector. Dashed gold = chunk vector. Same math is
+        what the vector database above is doing at retrieval time — just across thousands of chunks and hundreds of real
+        dimensions instead of 3.)</p>
+    </div>
+
+    <div class="connect-sub">
+      <h3>4 · Matching is by meaning, not shared words</h3>
+      <p>Because vectors encode meaning, "Do your pastries have nuts?" can retrieve a passage that only says "tree nut
+        allergens" — or one phrased in completely different words — as long as it's about the same thing. That's the
+        real advantage over the keyword search used in the demo above.</p>
+    </div>
+
+    <div class="connect-sub">
+      <h3>5 · The retrieved text becomes part of the API call</h3>
+      <div class="pipeline-cols" style="margin-top:8px;">
+        <div>
+          <div class="pipe-box">Documents</div>
+          <div class="pipe-arrow-text">↓ chunk, embed</div>
+          <div class="pipe-box gold">Vectors in a database</div>
+        </div>
+        <div>
+          <div class="pipe-box">Your question</div>
+          <div class="pipe-arrow-text">↓ embed, same model</div>
+          <div class="pipe-box gold">Question vector</div>
+        </div>
+      </div>
+      <div class="pipe-converge">↓ cosine similarity against every chunk ↓</div>
+      <div class="pipe-box teal pipe-final">Top-matching chunks pulled out, then handed to the model</div>
+      <p>Once the top chunks are chosen, they're inserted into the request sent to the model's API — usually in the
+        system prompt or at the top of the user message. This is what actually gets sent to a model like Claude:</p>
+      <p><strong>In plain terms:</strong> the system doesn't hand the model a "search result" in some special format —
+        it just glues text together. It takes the words from the matching document chunks, pastes them in front of your
+        question, and sends the whole thing as one ordinary block of text — the same way you'd paste a paragraph into a
+        chat box before typing your question. The model can't tell the difference between "text a person typed" and
+        "text a retrieval step pasted in." It just reads whatever text arrives and responds to all of it at once.</p>
+      <div class="prompt-block">{
+        <span class="lbl">"model"</span>: "claude-sonnet-4-6",
+        <span class="lbl">"system"</span>: "Answer using only the context provided below. If the answer isn't in the
+        context, say you don't know — don't guess.",
+        <span class="lbl">"messages"</span>: [
+        {
+        "role": "user",
+        "content": "CONTEXT:\n[Menu & Allergens] Most pastries contain gluten and tree nuts; oat and almond milk are
+        used, no dairy on site.\n\nQUESTION:\nDo your pastries have nuts in them?"
+        }
+        ]
+        }
+      </div>
+      <p>The model has no idea a "retrieval step" happened before this. From its side, it just received one message
+        containing some facts and a question — the same as any normal chat request. All the RAG-specific work happens
+        <em>before</em> the API call, in how that message gets built.</p>
+    </div>
+
+    <div class="connect-sub">
+      <h3>6 · Optional: it can run more than once</h3>
+      <p>Some systems let the model decide it needs to search again — read the first batch of results, realize they're
+        not enough, and trigger another retrieval before answering. That turns RAG from a single lookup into a small
+        loop the model can control, but the core mechanic is exactly the same three moving parts: embed, search, insert
+        into the prompt.</p>
+    </div>
+  </section>
+
+  <section class="wrap">
+    <h2>Lexical vs. semantic retrieval</h2>
+    <p class="section-lede">Everything above described <em>semantic</em> search — matching by meaning, via embeddings.
+      But it isn't the only way to retrieve, and plenty of real-world RAG systems start with something simpler: matching
+      by <em>words</em>.</p>
+
+    <div class="connect-sub">
+      <h3>Chunking isn't one-size-fits-all</h3>
+      <p>Prose splits cleanly at sentence or paragraph boundaries — that's what the café example above did. Source code
+        doesn't: cutting a function in half mid-body produces a chunk that means nothing on its own. So a real indexer
+        usually needs <strong>two chunking strategies</strong> — one that respects code structure (functions, classes)
+        and one that respects prose structure (paragraphs, headings) — chosen per file type.</p>
+    </div>
+
+    <div class="connect-sub">
+      <h3>Lexical retrieval: TF-IDF and BM25</h3>
+      <p>Instead of embedding meaning into vectors, lexical methods score a chunk by which specific <em>words</em> it
+        shares with the question — weighted so rare, distinctive words (like "espresso" or "invoice-3392") count for
+        more than common ones (like "the" or "is"). <strong>TF-IDF</strong> does this with a straightforward
+        frequency-times-rarity formula; <strong>BM25</strong> is a refinement that stops a word from dominating just
+        because it repeats many times in one chunk. Both are cheap, need no embedding model, and are excellent when
+        questions quote exact terms — identifiers, product codes, error messages — that an embedding might blur together
+        with similar-sounding text.</p>
+    </div>
+
+    <table class="vec-table">
+      <tr>
+        <th>Method</th>
+        <th>Matches by</th>
+        <th>Best at</th>
+      </tr>
+      <tr>
+        <td>TF-IDF / BM25 (lexical)</td>
+        <td>shared words, weighted by rarity</td>
+        <td>exact terms, identifiers, quoted phrases</td>
+      </tr>
+      <tr class="top">
+        <td>Embeddings + cosine similarity (semantic)</td>
+        <td>meaning, regardless of wording</td>
+        <td>paraphrases, synonyms, conceptual questions</td>
+      </tr>
+      <tr>
+        <td>Hybrid</td>
+        <td>both rankings, merged</td>
+        <td>covering each method's blind spots</td>
+      </tr>
+    </table>
+
+    <div class="connect-sub">
+      <h3>Hybrid retrieval combines both</h3>
+      <p>A hybrid system runs the lexical search and the semantic search separately, then merges the two ranked lists
+        (often by re-scoring each chunk with a weighted mix of both scores). It catches a question that quotes an exact
+        term <em>and</em> one that only paraphrases an idea — something neither method alone handles well.</p>
+    </div>
+
+    <div class="connect-sub">
+      <h3>See all three score the same question</h3>
+      <p>Using the same five café documents as the demo above, pick a question and watch <strong>TF-IDF</strong>,
+        <strong>BM25</strong>, and a simplified stand-in for <strong>semantic embeddings</strong> each score every
+        document, plus the <strong>hybrid</strong> score that blends the lexical and semantic results. TF-IDF and BM25
+        are computed live, for real, from the actual document text below. The semantic scores use hand-set vectors as a
+        stand-in for a trained embedding model — real ones aren't computed by hand, but the cosine-similarity math
+        driving the ranking is identical to the worked example above.</p>
+      <div class="demo-questions" id="methodQuestions"></div>
+      <div id="methodViz" class="method-grid" style="display:none;">
+        <div class="method-panel lexical">
+          <h4>TF-IDF</h4>
+          <p class="method-note">Term frequency × rarity across the document set — highest score wins.</p>
+          <div id="panelTfidf"></div>
+        </div>
+        <div class="method-panel lexical">
+          <h4>BM25</h4>
+          <p class="method-note">Like TF-IDF, but a repeated word stops adding as much once it's already made its point.
+          </p>
+          <div id="panelBm25"></div>
+        </div>
+        <div class="method-panel semantic">
+          <h4>Semantic (embeddings)</h4>
+          <p class="method-note">Cosine similarity between meaning-vectors — can win even with zero shared words.</p>
+          <div id="panelSemantic"></div>
+        </div>
+        <div class="method-panel hybrid">
+          <h4>Hybrid</h4>
+          <p class="method-note">BM25 and semantic scores, each normalized 0–1, averaged together.</p>
+          <div id="panelHybrid"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="connect-sub">
+      <h3>How you'd know it's actually working: recall@k</h3>
+      <p>To measure retrieval quality, take a question with a known correct source, run retrieval, and check whether
+        that correct source shows up anywhere in the top <em>k</em> results returned. The fraction of questions where it
+        does is <strong>recall@k</strong> — recall@5, for instance, is the share of questions whose right answer was
+        retrieved among the top 5 chunks. It scores retrieval on its own, before generation ever gets involved, which is
+        exactly why it's a separate step from judging whether the final written answer sounds good.</p>
+    </div>
+  </section>
+
+  <section class="wrap">
+    <h2>Why it's worth the extra step</h2>
+    <div class="why-grid">
+      <div class="why-item">
+        <h3>Fewer made-up facts</h3>
+        <p>The model is grounded in real text instead of free-associating from memory.</p>
+      </div>
+      <div class="why-item">
+        <h3>Current information</h3>
+        <p>Swap in new documents and the model's "knowledge" updates instantly — no retraining.</p>
+      </div>
+      <div class="why-item">
+        <h3>Private or specific data</h3>
+        <p>It can answer from your company's files or a specific book without ever being trained on them.</p>
+      </div>
+      <div class="why-item">
+        <h3>You can check the source</h3>
+        <p>Because the retrieved documents are visible, an answer can be traced back to where it came from.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="wrap">
+    <h2>Going further</h2>
+    <p class="section-lede">Chunking, semantic search, hybrid search, and evaluation are covered above. What follows is
+      further optimization on the same four steps — good to know exist, not required to understand RAG.</p>
+    <div class="why-grid">
+      <div class="why-item">
+        <h3>Re-ranking</h3>
+        <p>A second, more precise model re-scores the top retrieved chunks to push the best ones to the front.</p>
+      </div>
+      <div class="why-item">
+        <h3>Metadata filtering</h3>
+        <p>Narrowing the search by date, source, or permissions before similarity search runs, not after.</p>
+      </div>
+      <div class="why-item">
+        <h3>Incremental indexing</h3>
+        <p>When one source file changes, re-index just that file instead of rebuilding the whole index from scratch.</p>
+      </div>
+      <div class="why-item">
+        <h3>Caching</h3>
+        <p>Store the index and repeated query results so cold starts and common questions don't redo the same work.</p>
+      </div>
+      <div class="why-item">
+        <h3>Serving it over an API</h3>
+        <p>Wrapping search and answer generation behind a small HTTP endpoint so other programs — not just a CLI — can
+          query the system.</p>
+      </div>
+      <div class="why-item">
+        <h3>Multi-hop / agentic retrieval</h3>
+        <p>The model searches, reads, decides it needs more, and searches again — a loop instead of one lookup.</p>
+      </div>
+    </div>
+  </section>
+
+  <footer class="wrap">
+    <p>Built as a plain-language explainer for RAG — Retrieval-Augmented Generation.</p>
+  </footer>
+
+  <script>
+    // ---------------- Steps data ----------------
+    const steps = [
+      {
+        label: "1 · Ask",
+        title: "You ask a question",
+        num: "Step one",
+        text: "It starts like any question to an AI — typed in plain language. Nothing special happens yet; the system just needs to understand what you're asking about.",
+        icon: `<svg viewBox="0 0 100 100" class="step-icon" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="14" y="20" width="72" height="46" rx="6" stroke="currentColor" stroke-width="3"/>
+        <path d="M30 66 L30 82 L48 66" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/>
+        <line x1="28" y1="34" x2="72" y2="34" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+        <line x1="28" y1="46" x2="58" y2="46" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+      </svg>`
+      },
+      {
+        label: "2 · Retrieve",
+        title: "The system searches for relevant facts",
+        num: "Step two",
+        text: "Your question is used to search a knowledge base — documents, a database, web pages — and the handful of passages most relevant to your question are pulled out. This is the 'R' in RAG.",
+        icon: `<svg viewBox="0 0 100 100" class="step-icon" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="18" y="14" width="34" height="44" rx="3" stroke="currentColor" stroke-width="3"/>
+        <rect x="28" y="24" width="34" height="44" rx="3" stroke="currentColor" stroke-width="3" fill="var(--bg-card)"/>
+        <circle cx="70" cy="70" r="13" stroke="currentColor" stroke-width="3"/>
+        <line x1="79" y1="79" x2="90" y2="90" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+      </svg>`
+      },
+      {
+        label: "3 · Augment",
+        title: "Those facts are added to the prompt",
+        num: "Step three",
+        text: "The retrieved passages get inserted alongside your original question, forming one combined prompt: 'Here is some context — now answer this question using it.' This is the 'A' in RAG.",
+        icon: `<svg viewBox="0 0 100 100" class="step-icon" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="10" y="40" width="26" height="20" rx="3" stroke="currentColor" stroke-width="3"/>
+        <rect x="10" y="14" width="26" height="20" rx="3" stroke="currentColor" stroke-width="3"/>
+        <path d="M40 24 L58 50" stroke="currentColor" stroke-width="3"/>
+        <path d="M40 50 L58 50" stroke="currentColor" stroke-width="3"/>
+        <rect x="58" y="38" width="32" height="24" rx="3" stroke="currentColor" stroke-width="3" fill="var(--bg-card)"/>
+      </svg>`
+      },
+      {
+        label: "4 · Generate",
+        title: "The model writes an answer",
+        num: "Step four",
+        text: "The language model reads the combined prompt and writes a natural-language answer — grounded in the retrieved facts rather than guesswork. This is the 'G' in RAG.",
+        icon: `<svg viewBox="0 0 100 100" class="step-icon" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M24 76 L64 36 L74 46 L34 86 L20 90 Z" stroke="currentColor" stroke-width="3" stroke-linejoin="round" fill="var(--bg-card)"/>
+        <line x1="58" y1="42" x2="68" y2="52" stroke="currentColor" stroke-width="3"/>
+        <path d="M78 18 L81 26 L89 29 L81 32 L78 40 L75 32 L67 29 L75 26 Z" stroke="currentColor" stroke-width="2" fill="currentColor"/>
+      </svg>`
+      }
+    ];
+
+    const nav = document.getElementById('stepsNav');
+    const panels = document.getElementById('stepPanels');
+    steps.forEach((s, i) => {
+      const btn = document.createElement('button');
+      btn.className = 'step-btn' + (i === 0 ? ' active' : '');
+      btn.textContent = s.label;
+      btn.addEventListener('click', () => showStep(i));
+      nav.appendChild(btn);
+
+      const panel = document.createElement('div');
+      panel.className = 'step-panel' + (i === 0 ? ' active' : '');
+      panel.innerHTML = `<div>${s.icon}</div><div><span class="step-num">${s.num}</span><h3>${s.title}</h3><p>${s.text}</p></div>`;
+      panels.appendChild(panel);
+    });
+    function showStep(idx) {
+      document.querySelectorAll('.step-btn').forEach((b, i) => b.classList.toggle('active', i === idx));
+      document.querySelectorAll('.step-panel').forEach((p, i) => p.classList.toggle('active', i === idx));
+    }
+
+    // ---------------- Demo data ----------------
+    const docs = [
+      {
+        id: 'hours', title: 'STORE HOURS',
+        text: "Fern & Kettle is open Tuesday through Sunday, 8am–6pm. Closed Mondays for restocking.",
+        tags: "hours open close time monday sunday schedule",
+        answer: "we're open Tuesday through Sunday, 8am–6pm — closed Mondays for restocking."
+      },
+      {
+        id: 'menu', title: 'MENU & ALLERGENS',
+        text: "The menu includes oat-milk lattes, matcha, and pastries baked fresh daily. Most pastries contain gluten and tree nuts; only oat and almond milk are used, no dairy on site.",
+        tags: "menu food vegan gluten allergy nuts milk dairy pastries coffee",
+        answer: "our pastries are baked fresh daily and typically contain gluten and tree nuts, and all our milk options are plant-based (oat or almond) — there's no dairy on site."
+      },
+      {
+        id: 'loyalty', title: 'LOYALTY PROGRAM',
+        text: "Every purchase earns 1 point per dollar spent. 50 points unlocks a free drink. Sign up at the counter — no app required.",
+        tags: "loyalty points rewards program free discount signup app",
+        answer: "you earn 1 point per dollar spent, and 50 points gets you a free drink. Just sign up at the counter — no app needed."
+      },
+      {
+        id: 'plants', title: 'PLANT CARE & RETURNS',
+        text: "Plants purchased in-store come with a 30-day health guarantee. Bring the receipt and we'll replace or refund it.",
+        tags: "plant return refund guarantee dying water dead health warranty",
+        answer: "plants come with a 30-day health guarantee — bring your receipt and we'll replace or refund it."
+      },
+      {
+        id: 'wifi', title: 'WIFI & SEATING',
+        text: "Free wifi (network: FernKettle-Guest) is available for up to 2 hours per visit. Seating is first-come, first-served.",
+        tags: "wifi wireless internet seating laptop work seats table",
+        answer: "we've got free wifi — network FernKettle-Guest — for up to 2 hours per visit, and seating is first-come, first-served."
+      }
+    ];
+
+    const presetQuestions = [
+      "What time do you open on Sundays?",
+      "Do your pastries have nuts in them?",
+      "How does the rewards program work?",
+      "Can I return a plant that's dying?",
+      "Is there wifi I can use to work?"
+    ];
+
+    const qWrap = document.getElementById('demoQuestions');
+    presetQuestions.forEach(q => {
+      const chip = document.createElement('button');
+      chip.className = 'q-chip';
+      chip.textContent = q;
+      chip.addEventListener('click', () => { document.getElementById('demoInput').value = q; runDemo(q); });
+      qWrap.appendChild(chip);
+    });
+
+    const stopwords = new Set(['a', 'an', 'the', 'is', 'are', 'do', 'does', 'you', 'your', 'i', 'can', 'of', 'to', 'on', 'in', 'for', 'that', 'have', 'has', 'with', 'and', 'or', 'how', 'what', 'when', 'where', 'it', 'be', 'there', 'i\'m', 'there\'s']);
+
+    function scoreDoc(doc, words) {
+      const hay = (doc.title + ' ' + doc.text + ' ' + doc.tags).toLowerCase();
+      let score = 0;
+      words.forEach(w => { if (hay.includes(w)) score += 1; });
+      return score;
+    }
+
+    function highlight(text, words) {
+      let out = text;
+      words.forEach(w => {
+        if (w.length < 3) return;
+        const re = new RegExp('(' + w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'ig');
+        out = out.replace(re, '<mark>$1</mark>');
+      });
+      return out;
+    }
+
+    function runDemo(question) {
+      if (!question || !question.trim()) return;
+      const words = question.toLowerCase().replace(/[?.,!]/g, '').split(/\s+/).filter(w => w.length > 2 && !stopwords.has(w));
+
+      const scored = docs.map(d => ({ doc: d, score: scoreDoc(d, words) })).sort((a, b) => b.score - a.score);
+      const matches = scored.filter(s => s.score > 0).slice(0, 2);
+      const noMatch = matches.length === 0;
+      const topDocs = matches.map(m => m.doc);
+
+      // Render doc cards — nothing gets marked "match" when there's no real match
+      const docCards = document.getElementById('docCards');
+      docCards.innerHTML = '';
+      docs.forEach(d => {
+        const isMatch = topDocs.includes(d);
+        const card = document.createElement('div');
+        card.className = 'doc-card' + (isMatch ? ' match' : '');
+        card.innerHTML = `<div class="doc-title">${d.title}</div><p>${isMatch ? highlight(d.text, words) : d.text}</p>`;
+        docCards.appendChild(card);
+      });
+
+      document.getElementById('retrieveNote').textContent = noMatch
+        ? `Searched all ${docs.length} documents — none scored a meaningful match to this question.`
+        : `Searched all ${docs.length} documents — ${topDocs.length} matched closely enough to use.`;
+
+      // Render prompt block
+      const promptEl = document.getElementById('promptBlock');
+      if (noMatch) {
+        promptEl.innerHTML =
+          `<span class="lbl">SYSTEM</span>  Answer the question using only the context below. If the context doesn't cover it, say you don't know.\n\n` +
+          `<span class="lbl">CONTEXT</span>\n(none — nothing in the knowledge base matched this question well enough)\n\n` +
+          `<span class="lbl">QUESTION</span>  ${question}`;
+      } else {
+        const contextLines = topDocs.map(d => `[${d.title}] ${d.text}`).join('\n');
+        promptEl.innerHTML =
+          `<span class="lbl">SYSTEM</span>  Answer the question using only the context below.\n\n` +
+          `<span class="lbl">CONTEXT</span>\n${contextLines}\n\n` +
+          `<span class="lbl">QUESTION</span>  ${question}`;
+      }
+
+      // Render answer
+      const answerBlock = document.getElementById('answerBlock');
+      const whoEl = document.getElementById('answerWho');
+      const answerEl = document.getElementById('answerText');
+      if (noMatch) {
+        answerBlock.classList.add('no-match');
+        whoEl.textContent = 'No confident answer';
+        answerEl.textContent = " I don't have anything in this knowledge base about that, so I can't answer confidently — a well-behaved RAG system says that instead of guessing.";
+      } else {
+        answerBlock.classList.remove('no-match');
+        whoEl.textContent = 'Answer';
+        const answer = topDocs.map(d => d.answer).join(' Also, ');
+        answerEl.textContent = ' ' + answer.charAt(0).toUpperCase() + answer.slice(1);
+      }
+
+      ['stageRetrieve', 'stageAugment', 'stageGenerate'].forEach(id => document.getElementById(id).classList.add('show'));
+    }
+
+    document.getElementById('demoAsk').addEventListener('click', () => runDemo(document.getElementById('demoInput').value));
+    document.getElementById('demoInput').addEventListener('keydown', e => { if (e.key === 'Enter') runDemo(e.target.value); });
+
+    // ---------------- Method comparison: TF-IDF / BM25 / semantic / hybrid ----------------
+    const extraStop = new Set(['here', 'use']);
+    function stem(w) {
+      if (w.endsWith('ies')) return w.slice(0, -3) + 'y';
+      if (w.endsWith('es')) return w.slice(0, -2);
+      if (w.endsWith('s') && !w.endsWith('ss')) return w.slice(0, -1);
+      return w;
+    }
+    function tokenizeText(str) {
+      return str.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/)
+        .filter(w => w.length > 2 && !stopwords.has(w) && !extraStop.has(w))
+        .map(stem);
+    }
+    const docTokenCache = docs.map(d => tokenizeText(d.text));
+    const avgDocLen = docTokenCache.reduce((s, t) => s + t.length, 0) / docTokenCache.length;
+
+    function docFreq(term) { return docTokenCache.filter(toks => toks.includes(term)).length; }
+
+    function tfidfScores(qTokens) {
+      return docs.map((d, i) => {
+        const toks = docTokenCache[i];
+        let score = 0;
+        qTokens.forEach(t => {
+          const tf = toks.filter(w => w === t).length / toks.length;
+          const df = docFreq(t);
+          const idf = Math.log(docs.length / (1 + df)) + 1;
+          score += tf * idf;
+        });
+        return score;
+      });
+    }
+
+    function bm25Scores(qTokens) {
+      const k1 = 1.5, b = 0.75;
+      return docs.map((d, i) => {
+        const toks = docTokenCache[i];
+        let score = 0;
+        qTokens.forEach(t => {
+          const f = toks.filter(w => w === t).length;
+          const df = docFreq(t);
+          const idf = Math.log((docs.length - df + 0.5) / (df + 0.5) + 1);
+          const denom = f + k1 * (1 - b + b * (toks.length / avgDocLen));
+          score += denom > 0 ? idf * (f * (k1 + 1)) / denom : 0;
+        });
+        return Math.max(score, 0);
+      });
+    }
+
+    // Hand-authored toy "meaning" vectors — a stand-in for a trained embedding model.
+    // Dimensions (illustrative only): [food, plant, rewards, hours, connectivity]
+    const semanticDocVectors = {
+      hours: [0.05, 0.02, 0.02, 0.95, 0.10],
+      menu: [0.95, 0.05, 0.02, 0.02, 0.02],
+      loyalty: [0.03, 0.03, 0.95, 0.02, 0.02],
+      plants: [0.05, 0.95, 0.02, 0.02, 0.02],
+      wifi: [0.02, 0.02, 0.03, 0.10, 0.95]
+    };
+    const methodQuestions = [
+      { text: "What time do you open on Sundays?", vec: [0.05, 0.02, 0.02, 0.94, 0.05] },
+      { text: "Do your pastries have nuts in them?", vec: [0.93, 0.03, 0.02, 0.02, 0.03] },
+      { text: "How does the rewards program work?", vec: [0.04, 0.03, 0.92, 0.02, 0.05] },
+      { text: "Can I return a plant that's dying?", vec: [0.06, 0.94, 0.02, 0.02, 0.02] },
+      { text: "Is there internet here for working?", vec: [0.02, 0.02, 0.03, 0.08, 0.94] }
+    ];
+    function cosineSim(a, b) {
+      let dot = 0, na = 0, nb = 0;
+      for (let i = 0; i < a.length; i++) { dot += a[i] * b[i]; na += a[i] * a[i]; nb += b[i] * b[i]; }
+      return dot / (Math.sqrt(na) * Math.sqrt(nb));
+    }
+    function semanticScores(qVec) {
+      return docs.map(d => cosineSim(qVec, semanticDocVectors[d.id]));
+    }
+    function normalize(arr) {
+      const max = Math.max(...arr, 0.0001);
+      return arr.map(v => v / max);
+    }
+
+    function renderMethodPanel(containerId, scores) {
+      const container = document.getElementById(containerId);
+      container.innerHTML = '';
+      const max = Math.max(...scores);
+      const norm = normalize(scores);
+      docs.forEach((d, i) => {
+        const isTop = scores[i] === max && max > 0.0001;
+        const row = document.createElement('div');
+        row.className = 'bar-row' + (isTop ? ' top' : '');
+        row.innerHTML = `<div class="bar-label">${d.title}</div>
+        <div class="bar-track"><div class="bar-fill" style="width:${(norm[i] * 100).toFixed(0)}%"></div></div>
+        <div class="bar-value">${scores[i].toFixed(3)}</div>`;
+        container.appendChild(row);
+      });
+      if (max <= 0.0001) {
+        const note = document.createElement('div');
+        note.className = 'method-zero-note';
+        note.textContent = 'No shared words with any document — every score is zero.';
+        container.appendChild(note);
+      }
+    }
+
+    function runMethodViz(qIndex) {
+      const q = methodQuestions[qIndex];
+      const qTokens = tokenizeText(q.text);
+      const tfidf = tfidfScores(qTokens);
+      const bm25 = bm25Scores(qTokens);
+      const semantic = semanticScores(q.vec);
+      const bm25Norm = normalize(bm25);
+      const semNorm = normalize(semantic);
+      const hybrid = bm25Norm.map((v, i) => (v + semNorm[i]) / 2);
+
+      renderMethodPanel('panelTfidf', tfidf);
+      renderMethodPanel('panelBm25', bm25);
+      renderMethodPanel('panelSemantic', semantic);
+      renderMethodPanel('panelHybrid', hybrid);
+      document.getElementById('methodViz').style.display = 'grid';
+    }
+
+    const methodQWrap = document.getElementById('methodQuestions');
+    methodQuestions.forEach((q, i) => {
+      const chip = document.createElement('button');
+      chip.className = 'q-chip';
+      chip.textContent = q.text;
+      chip.addEventListener('click', () => {
+        methodQWrap.querySelectorAll('.q-chip').forEach(c => c.style.borderColor = 'var(--border)');
+        chip.style.borderColor = 'var(--teal)';
+        runMethodViz(i);
+      });
+      methodQWrap.appendChild(chip);
+    });
+  </script>
+
+</body>
+
+</html>
