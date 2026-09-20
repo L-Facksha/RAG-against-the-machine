@@ -1040,22 +1040,9 @@
 
     <div class="connect-sub">
       <h3>5 · The retrieved text becomes part of the API call</h3>
-      <div class="pipeline-cols" style="margin-top:8px;">
-        <div>
-          <div class="pipe-box">Documents</div>
-          <div class="pipe-arrow-text">↓ chunk, embed</div>
-          <div class="pipe-box gold">Vectors in a database</div>
-        </div>
-        <div>
-          <div class="pipe-box">Your question</div>
-          <div class="pipe-arrow-text">↓ embed, same model</div>
-          <div class="pipe-box gold">Question vector</div>
-        </div>
-      </div>
-      <div class="pipe-converge">↓ cosine similarity against every chunk ↓</div>
-      <div class="pipe-box teal pipe-final">Top-matching chunks pulled out, then handed to the model</div>
-      <p>Once the top chunks are chosen, they're inserted into the request sent to the model's API — usually in the
-        system prompt or at the top of the user message. This is what actually gets sent to a model like Claude:</p>
+      <p>Once the top chunks are chosen — by whichever method found them — they're inserted into the request sent to the
+        model's API, usually in the system prompt or at the top of the user message. This is what actually gets sent to
+        a model like Claude:</p>
       <p><strong>In plain terms:</strong> the system doesn't hand the model a "search result" in some special format —
         it just glues text together. It takes the words from the matching document chunks, pastes them in front of your
         question, and sends the whole thing as one ordinary block of text — the same way you'd paste a paragraph into a
@@ -1175,15 +1162,6 @@
           <div id="panelHybrid"></div>
         </div>
       </div>
-    </div>
-
-    <div class="connect-sub">
-      <h3>How you'd know it's actually working: recall@k</h3>
-      <p>To measure retrieval quality, take a question with a known correct source, run retrieval, and check whether
-        that correct source shows up anywhere in the top <em>k</em> results returned. The fraction of questions where it
-        does is <strong>recall@k</strong> — recall@5, for instance, is the share of questions whose right answer was
-        retrieved among the top 5 chunks. It scores retrieval on its own, before generation ever gets involved, which is
-        exactly why it's a separate step from judging whether the final written answer sounds good.</p>
     </div>
   </section>
 
