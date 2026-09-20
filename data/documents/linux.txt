@@ -1,0 +1,4 @@
+Linux is an operating system.
+The Linux kernel manages hardware resources.
+Processes and threads run on Linux.
+Linux provides system calls.

@@ -1,0 +1,3 @@
+RAG stands for Retrieval-Augmented Generation.
+RAG retrieves external information before generating an answer.
+A RAG system contains a retrieval stage and a generation stage.

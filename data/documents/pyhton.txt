@@ -1,0 +1,5 @@
+Python is a programming language.
+Python supports functions.
+Python supports classes.
+Python can be used for AI and machine learning.
+Python is dynamically typed.
