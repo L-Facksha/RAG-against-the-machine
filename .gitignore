@@ -1,1 +1,6 @@
 from_intra/
+.python-version/
+.cache/
+.vscode/
+.venv/
+build/
