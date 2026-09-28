@@ -36,7 +36,7 @@ def index_directory(directory: Path) -> list[Chunk]:
 
 def main():
     directory = Path(
-        "../../RAG-against-the-machine/data/documents")
+        "/home/piziga/RAG-against-the-machine/data/documents")
     chunks = index_directory(directory)
     print("Text to chinks: \n", chunks)
 
