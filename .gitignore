@@ -1,7 +1,7 @@
 from_intra/
-.python-version/
+.python-version
 .cache/
 .vscode/
 .venv/
 build/
-__pycache__
+__pycache__/
