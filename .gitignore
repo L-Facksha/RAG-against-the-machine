@@ -4,4 +4,4 @@ from_intra/
 .vscode/
 .venv/
 build/
-__pycache__/
+__pycache__
