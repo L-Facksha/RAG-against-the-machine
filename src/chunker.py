@@ -1,11 +1,13 @@
 from pathlib import Path
 from pydantic import BaseModel
 
+
 class Chunk(BaseModel):
     content: str
     file_path: str
     first_character_index: int
     last_character_index: int
+
 
 def chunk_text(text: str, max_size: int, path: Path) -> list[Chunk]:
     chunks: list[Chunk] = []
@@ -16,14 +18,15 @@ def chunk_text(text: str, max_size: int, path: Path) -> list[Chunk]:
         last_character_index = i + len(splited_text) - 1
 
         chunks.append(
-                Chunk(
-                    content=splited_text,
-                    file_path=path.name,
-                    first_character_index=first_character_index,
-                    last_character_index=last_character_index)
-                )
+            Chunk(
+                content=splited_text,
+                file_path=path.name,
+                first_character_index=first_character_index,
+                last_character_index=last_character_index)
+        )
 
     return chunks
+
 
 def index_directory(directory: Path) -> list[Chunk]:
     all_chunks: list[Chunk] = []
@@ -36,11 +39,10 @@ def index_directory(directory: Path) -> list[Chunk]:
 
 def main():
     directory = Path(
-        "/home/piziga/RAG-against-the-machine/data/documents")
+        "../../RAG-against-the-machine/data/documents")
     chunks = index_directory(directory)
     print("Text to chinks: \n", chunks)
 
 
 if __name__ == "__main__":
     main()
-
