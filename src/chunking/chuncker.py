@@ -5,63 +5,33 @@ from src.models.models import MinimalSource
 from langchain_text_splitters import RecursiveCharacterTextSplitter, Language
 
 
-# def split_large_node(source, node, max_size):
-#     tree = ast.parse(source)
-
-#     for node in ast.walk(tree):
-
-#         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
-
-#             first_character_index = get_character_index(
-#                 source,
-#                 node.lineno,
-#                 node.col_offset
-#             )
-
-#             end_character_index = get_character_index(
-#                 source,
-#                 node.end_lineno,
-#                 node.end_col_offset
-#             )
-
-
-def get_character_index(source: str, line: int, column: int) -> int:
-    lines = source.splitlines(keepends=True)
-    # print(lines)
-
-    return sum(len(current_line) for current_line in lines[:line - 1]) + column
-
-
 def python_chunker(path: Path, max_size: int) -> list[MinimalSource]:
     all_chunks: list[MinimalSource] = []
-    statments = ['If', 'For', 'While', 'Def']
 
     # print(path)
     # for file_path in path:
     with open(path, "r") as f:
         source = f.read()
-    
+
     python_splitter = RecursiveCharacterTextSplitter.from_language(
-        language=Language.PYTHON, chunk_size=100, chunk_overlap=0)
+        language=Language.PYTHON, chunk_size=max_size, chunk_overlap=0)
     python_docs = python_splitter.create_documents([source])
     for doc in python_docs:
         first_character_index = source.find(doc.page_content)
-        print("First: ", first_character_index)
+        # print("First: ", first_character_index)
         # print(len(repr(doc.page_content)))
-        last_character_index = first_character_index + len(doc.page_content) - 1
-        print("Last: ", last_character_index)
-        
-        # # all_chunks.append(doc.page_content)
-        # all_chunks.append(
-        #     MinimalSource(
-        #         file_path=str(path),
-        #         first_character_index=first_character_index,
-        #         last_character_index=last_character_index,
-        #     )
-        # )
+        last_character_index = first_character_index + len(doc.page_content)
+        # print("Last: ", last_character_index)
+        # print("Content:", repr(doc.page_content))
 
-        
-
+        # all_chunks.append(doc.page_content)
+        all_chunks.append(
+            MinimalSource(
+                file_path=str(path),
+                first_character_index=first_character_index,
+                last_character_index=last_character_index,
+            )
+        )
 
     return all_chunks
 
@@ -69,14 +39,20 @@ def python_chunker(path: Path, max_size: int) -> list[MinimalSource]:
 def main():
     directory = Path("/goinfre/azebahad/RAG-against-the-machine/test_body.py")
 
-    chunks = python_chunker(directory, 20)
+    chunks = python_chunker(directory, 100)
 
-    print("Python code chunks:\n\n",chunks)
+    print("Python code chunks:\n\n", chunks)
 
 
 if __name__ == "__main__":
     main()
 
+
+# def get_character_index(source: str, line: int, column: int) -> int:
+#     lines = source.splitlines(keepends=True)
+#     # print(lines)
+
+#     return sum(len(current_line) for current_line in lines[:line - 1]) + column
 
 # from pathlib import Path
 

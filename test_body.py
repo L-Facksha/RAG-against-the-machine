@@ -38,4 +38,3 @@ for node in ast.walk(tree):
                 "line:", statement.end_lineno,
                 "end line:", statement.end_col_offset
             )
-            
