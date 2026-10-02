@@ -47,8 +47,9 @@ def python_chunker(path: Path, max_size: int) -> list[MinimalSource]:
     for doc in python_docs:
         first_character_index = source.find(doc.page_content)
         print("First: ", first_character_index)
-        print(len(repr(doc.page_content)))
-        # last_character_index = first_character_index - 1
+        # print(len(repr(doc.page_content)))
+        last_character_index = first_character_index + len(doc.page_content) - 1
+        print("Last: ", last_character_index)
         
         # # all_chunks.append(doc.page_content)
         # all_chunks.append(
