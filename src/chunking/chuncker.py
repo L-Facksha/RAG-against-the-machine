@@ -1,10 +1,11 @@
 from pathlib import Path
-import ast
+# import ast
 
 from src.models.models import MinimalSource
-from langchain_text_splitters import RecursiveCharacterTextSplitter, Language
+from langchain_text_splitters import RecursiveCharacterTextSplitter, Language,
 
 from typing import Optional
+
 
 class Chunk(MinimalSource):
     content: str
@@ -12,14 +13,14 @@ class Chunk(MinimalSource):
     parent: Optional[str] = None
 
 
-def python_chunker(path: Path, max_size: int) -> tuple[list[Chunk], str]:
-    with open(path, "r", encoding="utf-8") as f:
+def python_chunker(path: Path, max_size: int) -> list[Chunk]:
+    with open(path, "r", encoding="utf-8"):
         # source = f.read()
         source = path.read_text(encoding="utf-8")
 
-        print(repr(source[0:40]))
-        print("char at index 24:", repr(source[24]))
-        print("char at index 25:", repr(source[25]))
+        # print(repr(source[0:40]))
+        # print("char at index 24:", repr(source[24]))
+        # print("char at index 25:", repr(source[25]))
 
     python_splitter = RecursiveCharacterTextSplitter.from_language(
         language=Language.PYTHON,
@@ -32,9 +33,10 @@ def python_chunker(path: Path, max_size: int) -> tuple[list[Chunk], str]:
     all_chunks: list[Chunk] = []
     for doc in python_docs:
         first_character_index = doc.metadata["start_index"]
-        last_character_index = first_character_index + len(doc.page_content) - 1
-        print("First: ", first_character_index)
-        print("Last: ", last_character_index)
+        last_character_index = first_character_index + \
+            len(doc.page_content) - 1
+        # print("First: ", first_character_index)
+        # print("Last: ", last_character_index)
 
         all_chunks.append(
             Chunk(
@@ -45,20 +47,28 @@ def python_chunker(path: Path, max_size: int) -> tuple[list[Chunk], str]:
             )
         )
 
-    return all_chunks, source
+    return all_chunks
 
 
-def main():
-    directory = Path("/home/piziga/RAG-against-the-machine/test_body.py")
-    chunks, source = python_chunker(directory, 100)
+def markdown_chunker(path: Path, max_size: int) -> list[Chunk]:
+    with open(path, "r", encoding="utf-8"):
+        source = path.read_text(encoding="utf-8")
+        
+    
 
-    for chunk in chunks:
-        assert source[chunk.first_character_index: chunk.last_character_index + 1] == chunk.content
-    print(f"all {len(chunks)} offsets verified correct")
+# def main():
+#     directory = Path(
+#         "/goinfre/azebahad/RAG-against-the-machine/src/chunking/chuncker.py")
+#     chunks, source = python_chunker(directory, 100)
+
+#     for chunk in chunks:
+#         assert source[chunk.first_character_index:
+#                       chunk.last_character_index + 1] == chunk.content
+#     print(f"all {len(chunks)} offsets verified correct")
 
 
-if __name__ == "__main__":
-    main()
+# if __name__ == "__main__":
+#     main()
 
 # def python_chunker(path: Path, max_size: int) -> list[MinimalSource]:
 #     all_chunks: list[MinimalSource] = []
