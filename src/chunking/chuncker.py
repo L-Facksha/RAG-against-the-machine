@@ -4,48 +4,106 @@ import ast
 from src.models.models import MinimalSource
 from langchain_text_splitters import RecursiveCharacterTextSplitter, Language
 
+from typing import Optional
 
-def python_chunker(path: Path, max_size: int) -> list[MinimalSource]:
-    all_chunks: list[MinimalSource] = []
+class Chunk(MinimalSource):
+    content: str
+    name: Optional[str] = None
+    parent: Optional[str] = None
 
-    # print(path)
-    # for file_path in path:
-    with open(path, "r") as f:
-        source = f.read()
+
+def python_chunker(path: Path, max_size: int) -> tuple[list[Chunk], str]:
+    with open(path, "r", encoding="utf-8") as f:
+        # source = f.read()
+        source = path.read_text(encoding="utf-8")
+
+        print(repr(source[0:40]))
+        print("char at index 24:", repr(source[24]))
+        print("char at index 25:", repr(source[25]))
 
     python_splitter = RecursiveCharacterTextSplitter.from_language(
-        language=Language.PYTHON, chunk_size=max_size, chunk_overlap=0)
+        language=Language.PYTHON,
+        chunk_size=max_size,
+        chunk_overlap=0,
+        add_start_index=True,  # gives the real position directly, no .find() needed
+    )
     python_docs = python_splitter.create_documents([source])
-    for doc in python_docs:
-        first_character_index = source.find(doc.page_content)
-        # print("First: ", first_character_index)
-        # print(len(repr(doc.page_content)))
-        last_character_index = first_character_index + len(doc.page_content)
-        # print("Last: ", last_character_index)
-        # print("Content:", repr(doc.page_content))
 
-        # all_chunks.append(doc.page_content)
+    all_chunks: list[Chunk] = []
+    for doc in python_docs:
+        first_character_index = doc.metadata["start_index"]
+        last_character_index = first_character_index + len(doc.page_content) - 1
+        print("First: ", first_character_index)
+        print("Last: ", last_character_index)
+
         all_chunks.append(
-            MinimalSource(
+            Chunk(
                 file_path=str(path),
                 first_character_index=first_character_index,
                 last_character_index=last_character_index,
+                content=doc.page_content,
             )
         )
 
-    return all_chunks
+    return all_chunks, source
 
 
 def main():
-    directory = Path("/goinfre/azebahad/RAG-against-the-machine/test_body.py")
+    directory = Path("/home/piziga/RAG-against-the-machine/test_body.py")
+    chunks, source = python_chunker(directory, 100)
 
-    chunks = python_chunker(directory, 100)
-
-    print("Python code chunks:\n\n", chunks)
+    for chunk in chunks:
+        assert source[chunk.first_character_index: chunk.last_character_index + 1] == chunk.content
+    print(f"all {len(chunks)} offsets verified correct")
 
 
 if __name__ == "__main__":
     main()
+
+# def python_chunker(path: Path, max_size: int) -> list[MinimalSource]:
+#     all_chunks: list[MinimalSource] = []
+
+#     # print(path)
+#     # for file_path in path:
+#     with open(path, "r") as f:
+#         source = f.read()
+
+#     python_splitter = RecursiveCharacterTextSplitter.from_language(
+#         language=Language.PYTHON, chunk_size=max_size, chunk_overlap=0)
+#     python_docs = python_splitter.create_documents([source])
+#     for doc in python_docs:
+#         first_character_index = source.find(doc.page_content)
+#         # print("First: ", first_character_index)
+#         # print(len(repr(doc.page_content)))
+#         last_character_index = first_character_index + len(doc.page_content)
+#         # print("Last: ", last_character_index)
+#         # print("Content:", repr(doc.page_content))
+
+#         # all_chunks.append(doc.page_content)
+#         all_chunks.append(
+#             MinimalSource(
+#                 file_path=str(path),
+#                 first_character_index=first_character_index,
+#                 last_character_index=last_character_index,
+#             )
+#         )
+
+#     return all_chunks
+
+
+# def main():
+#     directory = Path("/home/piziga/RAG-against-the-machine/test_body.py")
+
+#     chunks = python_chunker(directory, 100)
+#         for chunk in chunks:
+#             assert source[chunk.first_character_index : chunk.last_character_index + 1] == chunk.content
+#         print("all offsets verified correct")
+
+#     # print("Python code chunks:\n\n", chunks)
+
+
+# if __name__ == "__main__":
+#     main()
 
 
 # def get_character_index(source: str, line: int, column: int) -> int:
