@@ -2,7 +2,7 @@ from pathlib import Path
 # import ast
 
 from src.models.models import MinimalSource
-from langchain_text_splitters import RecursiveCharacterTextSplitter, Language,
+from langchain_text_splitters import RecursiveCharacterTextSplitter, MarkdownTextSplitter, Language
 
 from typing import Optional
 
@@ -18,9 +18,11 @@ def python_chunker(path: Path, max_size: int) -> list[Chunk]:
         # source = f.read()
         source = path.read_text(encoding="utf-8")
 
-        # print(repr(source[0:40]))
-        # print("char at index 24:", repr(source[24]))
-        # print("char at index 25:", repr(source[25]))
+        # print(repr(source[116:215]))
+        # print("char at index 117:", repr(source[117]))
+        # print("char at index 118:", repr(source[118]))
+        # print("char at index 119:", repr(source[119]))
+        # print("char at index 126:", repr(source[126]))
 
     python_splitter = RecursiveCharacterTextSplitter.from_language(
         language=Language.PYTHON,
@@ -30,15 +32,15 @@ def python_chunker(path: Path, max_size: int) -> list[Chunk]:
     )
     python_docs = python_splitter.create_documents([source])
 
-    all_chunks: list[Chunk] = []
+    chunks: list[Chunk] = []
     for doc in python_docs:
         first_character_index = doc.metadata["start_index"]
         last_character_index = first_character_index + \
             len(doc.page_content) - 1
-        # print("First: ", first_character_index)
-        # print("Last: ", last_character_index)
+        print("First: ", first_character_index)
+        print("Last: ", last_character_index)
 
-        all_chunks.append(
+        chunks.append(
             Chunk(
                 file_path=str(path),
                 first_character_index=first_character_index,
@@ -47,28 +49,56 @@ def python_chunker(path: Path, max_size: int) -> list[Chunk]:
             )
         )
 
-    return all_chunks
+    return chunks
 
 
 def markdown_chunker(path: Path, max_size: int) -> list[Chunk]:
     with open(path, "r", encoding="utf-8"):
         source = path.read_text(encoding="utf-8")
+
+    markdown_spliter = MarkdownTextSplitter(
+        chunk_size=max_size,
+        chunk_overlap=0,
+        add_start_index=True
+    )
+    md_content = markdown_spliter.create_documents([source])
+    print("MD_content: ", md_content)
+    chunks: list[Chunk] = []
+
+    for content in md_content:
+        print(content)
+        first_character_index = content.metadata['start_index']
+        last_character_index = first_character_index + \
+            len(content.page_content) - 1
+
+        print("First: ", first_character_index)
+        print("Last: ", last_character_index)
         
-    
+        chunks.append(
+            Chunk(
+                file_path=str(path),
+                first_character_index=first_character_index,
+                last_character_index=last_character_index,
+                content=content.page_content
+            )
+        )
 
-# def main():
-#     directory = Path(
-#         "/goinfre/azebahad/RAG-against-the-machine/src/chunking/chuncker.py")
-#     chunks, source = python_chunker(directory, 100)
-
-#     for chunk in chunks:
-#         assert source[chunk.first_character_index:
-#                       chunk.last_character_index + 1] == chunk.content
-#     print(f"all {len(chunks)} offsets verified correct")
+    return chunks
 
 
-# if __name__ == "__main__":
-#     main()
+def main():
+    directory = Path(
+        "/goinfre/azebahad/RAG-against-the-machine/README.md")
+    chunks = markdown_chunker(directory, 100)
+
+    # for chunk in chunks:
+    #     assert source[chunk.first_character_index:
+    #                   chunk.last_character_index + 1] == chunk.content
+    # print(f"all {len(chunks)} offsets verified correct")
+
+
+if __name__ == "__main__":
+    main()
 
 # def python_chunker(path: Path, max_size: int) -> list[MinimalSource]:
 #     all_chunks: list[MinimalSource] = []
