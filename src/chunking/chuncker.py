@@ -37,8 +37,8 @@ def python_chunker(path: Path, max_size: int) -> list[Chunk]:
         first_character_index = doc.metadata["start_index"]
         last_character_index = first_character_index + \
             len(doc.page_content) - 1
-        print("First: ", first_character_index)
-        print("Last: ", last_character_index)
+        # print("First: ", first_character_index)
+        # print("Last: ", last_character_index)
 
         chunks.append(
             Chunk(
@@ -62,18 +62,18 @@ def markdown_chunker(path: Path, max_size: int) -> list[Chunk]:
         add_start_index=True
     )
     md_content = markdown_spliter.create_documents([source])
-    print("MD_content: ", md_content)
+    # print("MD_content: ", md_content)
     chunks: list[Chunk] = []
 
     for content in md_content:
-        print(content)
+        # print(content)
         first_character_index = content.metadata['start_index']
         last_character_index = first_character_index + \
             len(content.page_content) - 1
 
-        print("First: ", first_character_index)
-        print("Last: ", last_character_index)
-        
+        # print("First: ", first_character_index)
+        # print("Last: ", last_character_index)
+
         chunks.append(
             Chunk(
                 file_path=str(path),
@@ -86,19 +86,19 @@ def markdown_chunker(path: Path, max_size: int) -> list[Chunk]:
     return chunks
 
 
-def main():
-    directory = Path(
-        "/goinfre/azebahad/RAG-against-the-machine/README.md")
-    chunks = markdown_chunker(directory, 100)
+# def main():
+#     directory = Path(
+#         "/goinfre/azebahad/RAG-against-the-machine/README.md")
+#     chunks = markdown_chunker(directory, 100)
 
-    # for chunk in chunks:
-    #     assert source[chunk.first_character_index:
-    #                   chunk.last_character_index + 1] == chunk.content
-    # print(f"all {len(chunks)} offsets verified correct")
+#     # for chunk in chunks:
+#     #     assert source[chunk.first_character_index:
+#     #                   chunk.last_character_index + 1] == chunk.content
+#     # print(f"all {len(chunks)} offsets verified correct")
 
 
-if __name__ == "__main__":
-    main()
+# if __name__ == "__main__":
+#     main()
 
 # def python_chunker(path: Path, max_size: int) -> list[MinimalSource]:
 #     all_chunks: list[MinimalSource] = []
