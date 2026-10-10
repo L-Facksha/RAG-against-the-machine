@@ -1,3 +1,4 @@
+from os import path
 from pathlib import Path
 # import ast
 
@@ -39,10 +40,12 @@ def python_chunker(path: Path, max_size: int) -> list[Chunk]:
             len(doc.page_content) - 1
         # print("First: ", first_character_index)
         # print("Last: ", last_character_index)
-
+        repo_root = Path(__file__).resolve().parents[2]
+        relative_file_path = path.relative_to(repo_root).as_posix()
+        print("Relative file path: ", relative_file_path)
         chunks.append(
             Chunk(
-                file_path=str(path),
+                file_path=relative_file_path,
                 first_character_index=first_character_index,
                 last_character_index=last_character_index,
                 content=doc.page_content,
@@ -74,9 +77,11 @@ def markdown_chunker(path: Path, max_size: int) -> list[Chunk]:
         # print("First: ", first_character_index)
         # print("Last: ", last_character_index)
 
+        repo_root = Path(__file__).resolve().parents[2]
+        relative_file_path = path.relative_to(repo_root).as_posix()
         chunks.append(
             Chunk(
-                file_path=str(path),
+                file_path=relative_file_path,
                 first_character_index=first_character_index,
                 last_character_index=last_character_index,
                 content=content.page_content
