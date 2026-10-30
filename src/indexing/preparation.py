@@ -1,16 +1,13 @@
 from src.indexing.recover import recover_data
 from src.indexing.indexer import python_indexer
 from src.chunking.chuncker import Chunk
-from pathlib import Path
 
 
-def preparation_data() -> tuple[list[str], list[Chunk]]:
+def preparation_data(directory: str, max_size) -> tuple[
+    list[str], list[Chunk]
+]:
     chunks: list[Chunk]
-    repo_root = Path.cwd()
-    # print(repo_root)
-    directory = repo_root / "data" / "raw"
-    # print(directory)
-    chunks = python_indexer(directory, 2000)
+    chunks = python_indexer(directory, max_size)
     recovred_data: list[str] = []
     for c in chunks:
         data = recover_data(
