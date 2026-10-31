@@ -3,7 +3,7 @@ from src.indexing.indexer import python_indexer
 from src.chunking.chuncker import Chunk
 
 
-def preparation_data(directory: str, max_size) -> tuple[
+def preparation_data(directory: str, max_size: int) -> tuple[
     list[str], list[Chunk]
 ]:
     chunks: list[Chunk]
