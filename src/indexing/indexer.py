@@ -10,6 +10,8 @@ def python_indexer(path: Path, max_size) -> list[Chunk]:
             all_chunks.extend(python_chunker(path_file, max_size))
         elif path_file.suffix == ".md":
             all_chunks.extend(markdown_chunker(path_file, max_size))
+        elif path_file.suffix == ".txt":
+            all_chunks.extend(markdown_chunker(path_file, max_size))
         else:
             continue
 

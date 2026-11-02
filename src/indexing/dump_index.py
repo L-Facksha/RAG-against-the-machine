@@ -13,8 +13,8 @@ def save_index(directory: str, max_size: int):
     processed_dir = Path('data/processed')
     processed_dir.mkdir(parents=True, exist_ok=True)
     joblib.dump(index, processed_dir / 'index.joblib')
-    c = joblib.load("data/processed/index.joblib")
-    # print(len(c['chunks']))
+    joblib.load("data/processed/index.joblib")
+    # print(c['tf_idf'].shape)
     # print(c['chunks'])
 
 
