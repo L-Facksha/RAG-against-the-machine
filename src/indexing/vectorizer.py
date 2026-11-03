@@ -12,4 +12,3 @@ def vectorize_data(directory: str, max_size: int) -> tuple[
     tf_idf = vectorizer.fit_transform(recovered_data)
 
     return tf_idf, vectorizer, chunks
-
