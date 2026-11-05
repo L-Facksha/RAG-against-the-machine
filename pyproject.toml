@@ -9,7 +9,9 @@ dependencies = [
     "langchain-text-splitters>=1.1.2",
     "pydantic>=2.13.5",
     "scikit-learn>=1.7.2",
+    "torch>=2.14.1",
     "tqdm>=4.70.1",
+    "transformers>=5.20.2",
 ]
 
 [dependency-groups]
