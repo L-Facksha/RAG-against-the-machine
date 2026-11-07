@@ -26,13 +26,13 @@ def retrieve_top_k(k: int, ranked_indices: np.ndarray,
     return retrieve_text, chunks_data
 
 
-index = load_index()
-vectorize_ques = vectorize_query(
-    "How to configure OpenAI server?", index['vectorizer'])
-similarity = calculate_similarity(vectorize_ques, index['tf_idf'])
-sorted_similarity = ranking_similarity(similarity)
-retrive, chunks = retrieve_top_k(1, sorted_similarity, index['chunks'])
-# for x in range(len(retrive)):
-#     print(f"{x}: {retrive[x]}\n")
-#     print("*" * 200)
-print(chunks)
+# index = load_index()
+# vectorize_ques = vectorize_query(
+#     "How to configure OpenAI server?", index['vectorizer'])
+# similarity = calculate_similarity(vectorize_ques, index['tf_idf'])
+# sorted_similarity = ranking_similarity(similarity)
+# retrive, chunks = retrieve_top_k(1, sorted_similarity, index['chunks'])
+# # for x in range(len(retrive)):
+# #     print(f"{x}: {retrive[x]}\n")
+# #     print("*" * 200)
+# print("retrive: ", retrive)

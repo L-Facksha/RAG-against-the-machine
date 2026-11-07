@@ -58,7 +58,7 @@ def search_dataset(path_dataset: str, k: int, saved_path: str):
 result = search_dataset(
     path_dataset="data/raw/datasets_public/public/UnansweredQuestions/dataset_code_public.json",
     k=5,
-    saved_path="data/output/search_results/dataset_code_public.json"
+    saved_path="data/output/search_results/UnansweredQuestions/dataset_code_public.json"
 )
 
 print(result)
